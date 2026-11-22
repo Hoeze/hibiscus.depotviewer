@@ -274,6 +274,17 @@ public class HBCIDepotUmsatzJob extends AbstractHBCIJob
 			Logger.info("BLZ 75090300: Dividende wird nicht als Depot-Order importiert.\n" + t.toString());
 			return null;
 		}
+		// Kapitalmaßnahmen (Umtausch, Spin-off, Gratisaktien) liefert die Bank
+		// nur mit einem Freitext, der nicht Kauf/Verkauf/Dividende ist.
+		// richtung ist bei dieser Bank invertiert: Lieferung = Zugang, Erhalt = Abgang.
+		if (t.richtung == Transaction.RICHTUNG_LIEFERUNG) {
+			Logger.info("BLZ 75090300: Freitext '" + freitext + "' wird als Einbuchung importiert.\n" + t.toString());
+			return DepotAktion.EINBUCHUNG.internal();
+		}
+		if (t.richtung == Transaction.RICHTUNG_ERHALT) {
+			Logger.info("BLZ 75090300: Freitext '" + freitext + "' wird als Ausbuchung importiert.\n" + t.toString());
+			return DepotAktion.AUSBUCHUNG.internal();
+		}
 		Logger.warn("BLZ 75090300: Depotumsatz wird nicht als Order importiert. Freitext: "
 				+ freitext + "\n" + t.toString());
 		return null;
@@ -282,12 +293,14 @@ public class HBCIDepotUmsatzJob extends AbstractHBCIJob
 	private BigDecimal getGesamtbetrag(Konto konto, String aktion, BigDecimal betrag) throws RemoteException
 	{
 		// Banken liefern unterschiedliche Vorzeichenkonventionen. Für erkannte
-		// Käufe/Verkäufe gilt intern der Geldfluss aus Kundensicht.
+		// Käufe/Verkäufe und Ein-/Ausbuchungen gilt intern der Geldfluss aus Kundensicht.
 		// Stornos werden bereits in parseDepotUmsatz ausgeschlossen.
-		if (DepotAktion.KAUF.internal().equals(aktion)) {
+		if (DepotAktion.KAUF.internal().equals(aktion)
+				|| DepotAktion.EINBUCHUNG.internal().equals(aktion)) {
 			return betrag.abs().negate();
 		}
-		if (DepotAktion.VERKAUF.internal().equals(aktion)) {
+		if (DepotAktion.VERKAUF.internal().equals(aktion)
+				|| DepotAktion.AUSBUCHUNG.internal().equals(aktion)) {
 			return betrag.abs();
 		}
 		return betrag;
