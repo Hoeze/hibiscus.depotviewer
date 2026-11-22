@@ -160,7 +160,9 @@ public class WertBerechnung {
 		int idx;
 		idx = -1;
 		for (int i = 0; i < orders.size(); i++) {
-			if (DepotAktion.VERKAUF.equals(DepotAktion.getByString(orders.get(i).getAttribute("aktion").toString()))) {
+			// Ausbuchungen (z.B. Umtausch bei Kapitalmaßnahmen) sind wie Verkäufe ein Abgang
+			DepotAktion aktion = DepotAktion.getByString(orders.get(i).getAttribute("aktion").toString());
+			if (DepotAktion.VERKAUF.equals(aktion) || DepotAktion.AUSBUCHUNG.equals(aktion)) {
 				idx = i;
 				break;
 			}
